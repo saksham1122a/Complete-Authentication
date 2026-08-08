@@ -26,11 +26,24 @@ import config from '../config/config.js'
             password: hashedPassword
         })
 
-        const token = jwt.sign({
+        const accessToken = jwt.sign({
             id:user._id,
         }, config.JWT_SECRET,
         {
-            expiresIn: "1d"
+            expiresIn: "15m"
+        })
+
+        const refreshToken = jwt.sign({
+            id:user._id,
+        }, config.JWT_SECRET,{
+            expiresIn: "7d"
+        })
+
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "strict",
+            maxAge: 7*24*60*60*1000 // 7days
         })
 
 res.status(201).json({
@@ -39,15 +52,19 @@ res.status(201).json({
         username: user.username,
         email:user.email,
     },
-     token
+     accessToken
 })
 
 }
 
+/**
+ * 
+ * The main objective to create this get-me api is to the fetch the details of the user
+ */
   export async function getMe(req,res){
      
 // sabse pehle token ko header se nikalenge 
-// split("")[1] ka matlab hai joh postman ke header mein hum authorization field bnake value mein pehle Barrier space token paste karenge then yeh verify karega on the basis of token
+// split("")[1] ka matlab hai joh postman ke header mein hum authorization field bnake value mein pehle Bearer space token paste karenge then yeh verify karega on the basis of token
 
 
     const token = req.headers.authorization?.split(" ") [ 1 ];
@@ -70,3 +87,45 @@ res.status(201).json({
     })
 
   }
+
+  export async function refreshToken(req,res){
+
+    const refreshToken = req.cookies.refreshToken;
+
+    if(!refreshToken){
+        return res.status(403).json({
+            message:"Refresh Token not found"
+        })
+    }
+
+    const decoded = jwt.verify(refreshToken, config.JWT_SECRET)
+
+    const accessToken = jwt.sign({
+        id:decoded.id,
+    }, config.JWT_SECRET,{
+        expiresIn: "15m"
+    }
+)
+
+ const newRefreshToken = jwt.sign({
+        id:decoded.id,
+    }, config.JWT_SECRET,{
+        expiresIn: "7d"
+    }
+)
+
+res.cookie(refreshToken, newRefreshToken,{
+           httpOnly: true,
+            secure: true,
+            sameSite: "strict",
+            maxAge: 7*24*60*60*1000 // 7days
+} )
+ 
+res.status(201).json({
+    message:"Access Token Refreshed successfully!",
+    accessToken
+})
+
+  }
+
+  
