@@ -5,7 +5,7 @@ import config from '../config/config.js'
 import sessionModel from '../models/session.model.js';
 
 
-    export async function register(req,res){
+  export async function register(req,res){
 
         const { username, email, password} = req.body;
     
@@ -70,11 +70,7 @@ res.status(201).json({
 
 }
 
-/**
- * 
- * The main objective to create this get-me api is to the fetch the details of the user
- */
-  export async function getMe(req,res){
+  export async function getMe(req,res){ // this api is created to fetched the details of a particular user like his username,email,password etc.
      
 // sabse pehle token ko header se nikalenge 
 // split("")[1] ka matlab hai joh postman ke header mein hum authorization field bnake value mein pehle Bearer space token paste karenge then yeh verify karega on the basis of token
@@ -190,6 +186,33 @@ res.status(201).json({
 
     res.status(200).json({
         message:"Logout Successfully"
+    })
+
+  }
+
+  export async function logoutAll(req,res){
+
+    const refreshToken = req.cookies.refreshToken;
+
+    if(!refreshToken){
+        return res.status(400).json({
+            message:"Refresh Token not found!"
+        })
+    }
+
+    const decoded = jwt.verify(refreshToken, config.JWT_SECRET)
+
+    await sessionModel.updateMany({
+        user: decoded.id,
+        revoked: false
+    },{
+        revoked:true
+    })
+
+    res.clearCookie("refreshToken")
+
+    res.status(200).json({
+        message: "Logged out of all devices successfully!"
     })
 
   }
